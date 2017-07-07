@@ -1,4 +1,4 @@
-package config.Configuration;
+package config;
 
 import java.util.*;
 import java.io.*;
@@ -18,6 +18,24 @@ public class Configuration
     extends Properties
 {
     /**
+     * Wrapper for named constructor to uncheck IOExceptions.
+     *
+     * @param filename filename parameter for Configuration(filename)
+     * @return constructed Configuration
+     * @throws UncheckedIOException if constructor throws IOException
+     **/
+    private static Configuration
+        uncheckIOExceptionOnConstructor(String filename)
+        throws UncheckedIOException
+    {
+        try {
+            return new Configuration(filename);
+        }
+        catch(IOException ioe) {
+            throw new UncheckedIOException(ioe);
+        }
+    }
+    /**
      * HashMap to implement singletons.
      **/
     private static HashMap<String, Configuration> singletonConfigurations
@@ -25,7 +43,7 @@ public class Configuration
 
     /**
      * @return default singleton Configuration.
-     * @throws IllegalStateException if an IOException occurs in constructing the Configuration
+     * @throws UncheckedIOException if an IOException occurs in constructing the Configuration
      **/
     public synchronized static Configuration singleton()
     {
@@ -35,18 +53,16 @@ public class Configuration
     /**
      * @param filename name of file to read the configuration from.
      * @return singleton Configuration found from filename.
-     * @throws IllegalStateException if an IOException occurs in constructing the Configuration
+     * @throws UncheckedIOException if an IOException occurs in constructing the Configuration
      **/
     public synchronized static Configuration singleton(String filename)
     {
-        try {
-            return
-                singletonConfigurations
-                .computeIfAbsent(filename, () -> new Configuration(filename));
-        }
-        catch(IOException ioe) {
-            throw new IllegalStateException(ioe);
-        }
+        return
+            singletonConfigurations
+            .computeIfAbsent(filename,
+                             f ->
+                             uncheckIOExceptionOnConstructor(f)
+                             );
     }
 
     /**
@@ -141,13 +157,13 @@ public class Configuration
         String result = null;
         boolean found = false;
         if(super.containsKey(key)) {
-            result = super.get(key);
+            result = super.getProperty(key);
             found = true;
         }
         if(!found) {
             for(Properties p : chain) {
                 if(p.containsKey(key)) {
-                    result = p.get(key);
+                    result = p.getProperty(key);
                     found = true;
                     break;
                 }
